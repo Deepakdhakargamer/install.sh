@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# ==========================
+# =====================================
 # Astro Dashboard Installer
-# ==========================
+# =====================================
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -16,7 +16,7 @@ while true; do
     clear
 
     echo -e "${CYAN}==============================================${NC}"
-    echo -e "${BLUE}         Astro Dashboard Installer${NC}"
+    echo -e "${BLUE}        Astro Dashboard Installer${NC}"
     echo -e "${CYAN}==============================================${NC}"
 
     if [ -d "/root/Free-Dasebord" ]; then
@@ -33,9 +33,13 @@ while true; do
     read -p "Select an option [1-3]: " OPTION
 
     case $OPTION in
+
     1)
         clear
-        echo -e "${CYAN}Installing Astro Dashboard...${NC}"
+
+        echo -e "${CYAN}==============================================${NC}"
+        echo -e "${BLUE}Installing Astro Dashboard...${NC}"
+        echo -e "${CYAN}==============================================${NC}"
 
         echo -e "${YELLOW}[1/7] Updating System...${NC}"
         apt update -y
@@ -52,9 +56,12 @@ while true; do
         g++ \
         python3 \
         pkg-config \
-        libsqlite3-dev
+        libsqlite3-dev \
+        lsof \
+        psmisc
 
         echo -e "${YELLOW}[3/7] Installing Node.js 20...${NC}"
+
         if ! command -v node >/dev/null 2>&1; then
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
             apt install -y nodejs
@@ -85,35 +92,75 @@ while true; do
         find . -name "*.sqlite" -delete
         find . -name "*.sqlite3" -delete
 
-        echo -e "${YELLOW}[7/7] Starting Dashboard...${NC}"
+        echo -e "${YELLOW}[7/7] Freeing Ports...${NC}"
+
+        pkill -9 node >/dev/null 2>&1 || true
+        fuser -k 3000/tcp >/dev/null 2>&1 || true
+        fuser -k 5173/tcp >/dev/null 2>&1 || true
+        fuser -k 24678/tcp >/dev/null 2>&1 || true
+        fuser -k 80/tcp >/dev/null 2>&1 || true
+        fuser -k 443/tcp >/dev/null 2>&1 || true
+
+        clear
+        echo -e "${GREEN}==============================================${NC}"
+        echo -e "${GREEN}Dashboard Installed Successfully!${NC}"
+        echo -e "${GREEN}Starting Dashboard...${NC}"
+        echo -e "${GREEN}==============================================${NC}"
 
         npm run dev
-
         ;;
+
     2)
         clear
 
-        if [ -d "/root/Free-Dasebord" ]; then
-            echo -e "${YELLOW}Deleting Dashboard...${NC}"
+        echo -e "${RED}==============================================${NC}"
+        echo -e "${RED}Removing Astro Dashboard...${NC}"
+        echo -e "${RED}==============================================${NC}"
 
-            rm -rf /root/Free-Dasebord
+        echo -e "${YELLOW}Stopping PM2...${NC}"
 
-            echo -e "${GREEN}Dashboard Deleted Successfully!${NC}"
-        else
-            echo -e "${RED}Dashboard is not installed.${NC}"
+        if command -v pm2 >/dev/null 2>&1; then
+            pm2 delete astro-dashboard >/dev/null 2>&1 || true
+            pm2 delete all >/dev/null 2>&1 || true
+            pm2 save >/dev/null 2>&1 || true
         fi
 
-        echo ""
-        read -p "Press Enter to return to menu..."
+        echo -e "${YELLOW}Stopping Node.js...${NC}"
+        pkill -9 node >/dev/null 2>&1 || true
+
+        echo -e "${YELLOW}Freeing Ports...${NC}"
+        fuser -k 3000/tcp >/dev/null 2>&1 || true
+        fuser -k 5173/tcp >/dev/null 2>&1 || true
+        fuser -k 24678/tcp >/dev/null 2>&1 || true
+        fuser -k 80/tcp >/dev/null 2>&1 || true
+        fuser -k 443/tcp >/dev/null 2>&1 || true
+
+        echo -e "${YELLOW}Deleting Dashboard Files...${NC}"
+
+        rm -rf /root/Free-Dasebord
+
+        clear
+
+        echo -e "${GREEN}==============================================${NC}"
+        echo -e "${GREEN}Dashboard Deleted Successfully!${NC}"
+        echo -e "${GREEN}✔ Node Processes Stopped${NC}"
+        echo -e "${GREEN}✔ Ports Released (3000,5173,24678,80,443)${NC}"
+        echo -e "${GREEN}✔ Dashboard Files Removed${NC}"
+        echo -e "${GREEN}==============================================${NC}"
+
+        read -p "Press Enter to continue..."
         ;;
+
     3)
         clear
         echo -e "${GREEN}Thank you for using Astro Dashboard Installer!${NC}"
         exit 0
         ;;
+
     *)
         echo -e "${RED}Invalid Option!${NC}"
         sleep 2
         ;;
     esac
+
 done
