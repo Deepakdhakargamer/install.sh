@@ -1,20 +1,22 @@
 #!/bin/bash
-
 set -e
 
 echo "======================================"
 echo " Astro Dashboard Installer"
 echo "======================================"
 
-if ! command -v git >/dev/null 2>&1; then
-    apt update
-    apt install -y git
+apt update
+apt install -y curl git ca-certificates gnupg
+
+if ! command -v node >/dev/null 2>&1; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt install -y nodejs
 fi
 
-if ! command -v npm >/dev/null 2>&1; then
-    echo "Node.js/npm is not installed!"
-    exit 1
-fi
+echo "Node Version: $(node -v)"
+echo "NPM Version: $(npm -v)"
+
+rm -rf Free-Dasebord
 
 git clone https://github.com/Deepakdhakargamer/Free-Dasebord.git
 
