@@ -168,9 +168,14 @@ install_astrocloude() {
 
     echo -e "${YELLOW}Installing NPM Packages...${NC}"
 
-    rm -rf node_modules
+   
+    rm -rf node_modules package-lock.json
 
-    npm install
+    npm cache clean --force
+
+    npm install --include=optional
+
+    npm install @tailwindcss/oxide-linux-x64-gnu --save-dev --force rm -rf node_modules
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}NPM installation failed!${NC}"
