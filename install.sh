@@ -1,10 +1,14 @@
 #!/bin/bash
 
-# ==========================================
+# ==========================================================
 # AstroCloude + Free Dashboard Installer
-# ==========================================
+# ==========================================================
 
 set -u
+
+# ==========================================================
+# Paths / Repositories
+# ==========================================================
 
 ASTRO_PATH="/root/AstroCloude"
 FREE_PATH="/root/Free-Dasebord"
@@ -14,9 +18,9 @@ FREE_REPO="https://github.com/Deepakdhakargamer/Free-Dasebord.git"
 
 PORT=3000
 
-# ==========================================
+# ==========================================================
 # Colors
-# ==========================================
+# ==========================================================
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -24,39 +28,40 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# ==========================================
+# ==========================================================
 # Root Check
-# ==========================================
+# ==========================================================
 
 if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}Please run this installer as root.${NC}"
+    echo -e "${RED}ERROR: Please run this installer as root.${NC}"
     exit 1
 fi
 
-# ==========================================
+# ==========================================================
 # Stop Port
-# ==========================================
+# ==========================================================
 
 stop_port() {
-    echo -e "${YELLOW}Checking port $PORT...${NC}"
+
+    echo -e "${YELLOW}Checking port ${PORT}...${NC}"
 
     if command -v fuser >/dev/null 2>&1; then
         fuser -k "${PORT}/tcp" >/dev/null 2>&1 || true
     fi
 
-    sleep 1
+    sleep 2
 }
 
-# ==========================================
+# ==========================================================
 # Install System Requirements
-# ==========================================
+# ==========================================================
 
 install_requirements() {
 
     echo ""
-    echo -e "${CYAN}=========================================${NC}"
-    echo -e "${CYAN} Installing System Requirements${NC}"
-    echo -e "${CYAN}=========================================${NC}"
+    echo -e "${CYAN}==========================================${NC}"
+    echo -e "${CYAN}     Installing System Requirements${NC}"
+    echo -e "${CYAN}==========================================${NC}"
     echo ""
 
     apt-get update
@@ -76,53 +81,55 @@ install_requirements() {
         lsof \
         psmisc
 
-    # ======================================
-    # Node.js
-    # ======================================
+    # ------------------------------------------------------
+    # Install Node.js 20 if Node.js is missing
+    # ------------------------------------------------------
 
     if command -v node >/dev/null 2>&1; then
 
-        NODE_VERSION=$(node -v)
-        echo -e "${GREEN}Node.js already installed: $NODE_VERSION${NC}"
+        echo -e "${GREEN}Node.js already installed:${NC}"
+        node -v
 
     else
 
         echo -e "${YELLOW}Installing Node.js 20...${NC}"
 
         curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
         apt-get install -y nodejs
 
     fi
 
     echo ""
+    echo "Node.js:"
     node -v
+
+    echo "NPM:"
     npm -v
+
     echo ""
 }
 
-# ==========================================
-# Install Free Dashboard
-# ==========================================
+# ==========================================================
+# Clone / Update Free Dashboard
+# ==========================================================
 
-install_free_dashboard() {
+prepare_free_dashboard() {
 
-    echo ""
-    echo -e "${CYAN}=========================================${NC}"
-    echo -e "${CYAN} Installing Free Dashboard${NC}"
-    echo -e "${CYAN}=========================================${NC}"
-    echo ""
+    if [ -d "$FREE_PATH/.git" ]; then
 
-    if [ -d "$FREE_PATH" ]; then
-
-        echo -e "${YELLOW}Free Dashboard already exists.${NC}"
+        echo "Free Dashboard already exists."
         echo "Updating repository..."
 
-        cd "$FREE_PATH" || {
-            echo -e "${RED}Cannot enter $FREE_PATH${NC}"
-            return 1
+        cd "$FREE_PATH" || return 1
+
+        git pull || {
+            echo -e "${YELLOW}Git pull failed. Using existing files.${NC}"
         }
 
-        git pull
+    elif [ -d "$FREE_PATH" ]; then
+
+        echo -e "${YELLOW}Free Dashboard directory exists but is not a git repository.${NC}"
 
     else
 
@@ -133,20 +140,40 @@ install_free_dashboard() {
             return 1
         }
 
-        cd "$FREE_PATH" || {
-            echo -e "${RED}Cannot enter $FREE_PATH${NC}"
-            return 1
-        }
-
     fi
 
-    if [ ! -f "package.json" ]; then
-        echo -e "${RED}package.json not found in Free Dashboard.${NC}"
+    return 0
+}
+
+# ==========================================================
+# Install Free Dashboard
+# ==========================================================
+
+install_free_dashboard() {
+
+    echo ""
+    echo -e "${CYAN}==========================================${NC}"
+    echo -e "${CYAN}       Installing Free Dashboard${NC}"
+    echo -e "${CYAN}==========================================${NC}"
+    echo ""
+
+    prepare_free_dashboard || return 1
+
+    cd "$FREE_PATH" || {
+        echo -e "${RED}Cannot enter $FREE_PATH${NC}"
         return 1
+    }
+
+    if [ ! -f "package.json" ]; then
+
+        echo -e "${RED}ERROR: package.json not found.${NC}"
+        return 1
+
     fi
 
     echo ""
-    echo "Installing dependencies..."
+    echo "Installing Free Dashboard dependencies..."
+    echo ""
 
     npm install || {
         echo -e "${RED}Free Dashboard npm install failed.${NC}"
@@ -167,31 +194,26 @@ install_free_dashboard() {
     npm run dev
 }
 
-# ==========================================
-# Install AstroCloude
-# ==========================================
+# ==========================================================
+# Clone / Update AstroCloude
+# ==========================================================
 
-install_astrocloude() {
+prepare_astrocloude() {
 
-    echo ""
-    echo -e "${CYAN}=========================================${NC}"
-    echo -e "${CYAN} Installing AstroCloude${NC}"
-    echo -e "${CYAN}=========================================${NC}"
-    echo ""
+    if [ -d "$ASTRO_PATH/.git" ]; then
 
-    if [ -d "$ASTRO_PATH" ]; then
-
-        echo -e "${YELLOW}AstroCloude already exists.${NC}"
+        echo "AstroCloude already exists."
         echo "Updating repository..."
 
-        cd "$ASTRO_PATH" || {
-            echo -e "${RED}Cannot enter $ASTRO_PATH${NC}"
-            return 1
-        }
+        cd "$ASTRO_PATH" || return 1
 
         git pull || {
-            echo -e "${YELLOW}Git pull failed, continuing with existing files...${NC}"
+            echo -e "${YELLOW}Git pull failed. Using existing files.${NC}"
         }
+
+    elif [ -d "$ASTRO_PATH" ]; then
+
+        echo -e "${YELLOW}AstroCloude directory exists but is not a git repository.${NC}"
 
     else
 
@@ -204,113 +226,179 @@ install_astrocloude() {
 
     fi
 
-    # ======================================
-    # ALWAYS ENTER CORRECT DIRECTORY
-    # ======================================
+    return 0
+}
+
+# ==========================================================
+# Install AstroCloude
+# ==========================================================
+
+install_astrocloude() {
+
+    echo ""
+    echo -e "${CYAN}==========================================${NC}"
+    echo -e "${CYAN}          Installing AstroCloude${NC}"
+    echo -e "${CYAN}==========================================${NC}"
+    echo ""
+
+    # ------------------------------------------------------
+    # Clone / Update
+    # ------------------------------------------------------
+
+    prepare_astrocloude || return 1
+
+    # ------------------------------------------------------
+    # IMPORTANT: Always enter project directory
+    # ------------------------------------------------------
 
     cd "$ASTRO_PATH" || {
+
         echo -e "${RED}ERROR: Cannot enter $ASTRO_PATH${NC}"
         return 1
+
     }
 
-    # ======================================
-    # Check package.json
-    # ======================================
+    echo ""
+    echo -e "${GREEN}AstroCloude directory:${NC}"
+    pwd
+    echo ""
+
+    # ------------------------------------------------------
+    # package.json check
+    # ------------------------------------------------------
 
     if [ ! -f "package.json" ]; then
 
         echo -e "${RED}ERROR: package.json not found!${NC}"
+        echo ""
         echo "Current directory:"
         pwd
+        echo ""
+
         return 1
 
     fi
 
-    echo ""
-    echo -e "${CYAN}Current project directory:${NC}"
-    pwd
+    # ------------------------------------------------------
+    # Node / NPM information
+    # ------------------------------------------------------
+
+    echo "Node version:"
+    node -v
+
+    echo "NPM version:"
+    npm -v
 
     echo ""
-    echo -e "${CYAN}=========================================${NC}"
-    echo -e "${CYAN} Fixing Node.js dependencies${NC}"
-    echo -e "${CYAN}=========================================${NC}"
-    echo ""
 
-    # ======================================
-    # Remove broken dependencies
-    # ======================================
-
-    echo "[1/5] Removing node_modules and lock file..."
-
-    rm -rf node_modules package-lock.json
-
-    # ======================================
-    # Clean npm cache
-    # ======================================
-
-    echo "[2/5] Cleaning npm cache..."
-
-    npm cache clean --force
-
-    # ======================================
-    # Install optional dependencies
-    # ======================================
-
-    echo "[3/5] Installing dependencies..."
-
-    npm install --include=optional || {
-
-        echo -e "${RED}npm install failed.${NC}"
-        return 1
-
-    }
-
-    # ======================================
-    # Tailwind Oxide Native Binding
-    # ======================================
-
-    echo "[4/5] Installing Tailwind CSS Oxide..."
-
-    npm install @tailwindcss/oxide --force || {
-
-        echo -e "${RED}Failed to install @tailwindcss/oxide.${NC}"
-        return 1
-
-    }
-
-    # ======================================
-    # Verify Installation
-    # ======================================
-
-    echo "[5/5] Verifying installation..."
-
-    if [ ! -d "node_modules/@tailwindcss/oxide" ]; then
-
-        echo -e "${RED}Tailwind CSS Oxide installation was not found.${NC}"
-        return 1
-
-    fi
-
-    echo ""
-    echo -e "${GREEN}=========================================${NC}"
-    echo -e "${GREEN} AstroCloude installation completed${NC}"
-    echo -e "${GREEN}=========================================${NC}"
-    echo ""
-
-    echo "Project: $ASTRO_PATH"
-    echo "Port: $PORT"
-    echo ""
-
-    # ======================================
-    # Stop Existing Vite Process
-    # ======================================
+    # ------------------------------------------------------
+    # Stop existing Vite
+    # ------------------------------------------------------
 
     stop_port
 
-    # ======================================
-    # IMPORTANT:
-    # Run npm from AstroCloude directory
-    # ======================================
+    # ------------------------------------------------------
+    # Remove broken dependencies
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[1/7] Removing old node_modules...${NC}"
+
+    rm -rf node_modules
+
+    echo -e "${CYAN}[2/7] Removing package-lock.json...${NC}"
+
+    rm -f package-lock.json
+
+    # ------------------------------------------------------
+    # Clean npm cache
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[3/7] Cleaning npm cache...${NC}"
+
+    npm cache clean --force
+
+    # ------------------------------------------------------
+    # Install dependencies
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[4/7] Installing dependencies with optional packages...${NC}"
+
+    npm install --include=optional || {
+
+        echo ""
+        echo -e "${RED}ERROR: npm install failed.${NC}"
+        return 1
+
+    }
+
+    # ------------------------------------------------------
+    # Install Tailwind Oxide
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[5/7] Installing @tailwindcss/oxide...${NC}"
+
+    npm install @tailwindcss/oxide --force || {
+
+        echo ""
+        echo -e "${RED}ERROR: @tailwindcss/oxide installation failed.${NC}"
+        return 1
+
+    }
+
+    # ------------------------------------------------------
+    # Install Linux x64 native binding
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[6/7] Installing Linux native Tailwind Oxide binding...${NC}"
+
+    npm install @tailwindcss/oxide-linux-x64-gnu --force || {
+
+        echo ""
+        echo -e "${RED}ERROR: Linux native Tailwind Oxide binding failed.${NC}"
+        echo ""
+        echo "Your system may not be compatible with the x64 GNU binding."
+        return 1
+
+    }
+
+    # ------------------------------------------------------
+    # Verify native binding
+    # ------------------------------------------------------
+
+    echo -e "${CYAN}[7/7] Verifying Tailwind native binding...${NC}"
+
+    if [ ! -d "node_modules/@tailwindcss/oxide" ]; then
+
+        echo -e "${RED}ERROR: @tailwindcss/oxide is missing.${NC}"
+        return 1
+
+    fi
+
+    if [ ! -d "node_modules/@tailwindcss/oxide-linux-x64-gnu" ]; then
+
+        echo -e "${RED}ERROR: Linux native Oxide binding is missing.${NC}"
+        return 1
+
+    fi
+
+    echo ""
+    echo -e "${GREEN}==========================================${NC}"
+    echo -e "${GREEN}     AstroCloude Dependencies Ready${NC}"
+    echo -e "${GREEN}==========================================${NC}"
+    echo ""
+
+    echo "Project:"
+    echo "$ASTRO_PATH"
+
+    echo ""
+    echo "Port:"
+    echo "$PORT"
+
+    echo ""
+
+    # ------------------------------------------------------
+    # Final directory check
+    # ------------------------------------------------------
 
     cd "$ASTRO_PATH" || {
 
@@ -319,20 +407,35 @@ install_astrocloude() {
 
     }
 
-    echo -e "${CYAN}Starting AstroCloude...${NC}"
+    # ------------------------------------------------------
+    # Verify package.json before starting
+    # ------------------------------------------------------
+
+    if [ ! -f "package.json" ]; then
+
+        echo -e "${RED}ERROR: package.json disappeared or is missing.${NC}"
+        return 1
+
+    fi
+
+    echo -e "${GREEN}Starting AstroCloude...${NC}"
     echo ""
+
+    # package.json already contains:
+    # vite --port=3000 --host=0.0.0.0
 
     npm run dev
 }
 
-# ==========================================
+# ==========================================================
 # Delete Free Dashboard
-# ==========================================
+# ==========================================================
 
 delete_free_dashboard() {
 
     echo ""
     echo -e "${YELLOW}Deleting Free Dashboard...${NC}"
+    echo ""
 
     if [ -d "$FREE_PATH" ]; then
 
@@ -345,16 +448,19 @@ delete_free_dashboard() {
         echo -e "${YELLOW}Free Dashboard is not installed.${NC}"
 
     fi
+
+    echo ""
 }
 
-# ==========================================
+# ==========================================================
 # Delete AstroCloude
-# ==========================================
+# ==========================================================
 
 delete_astrocloude() {
 
     echo ""
     echo -e "${YELLOW}Deleting AstroCloude...${NC}"
+    echo ""
 
     if [ -d "$ASTRO_PATH" ]; then
 
@@ -369,20 +475,22 @@ delete_astrocloude() {
         echo -e "${YELLOW}AstroCloude is not installed.${NC}"
 
     fi
+
+    echo ""
 }
 
-# ==========================================
+# ==========================================================
 # Main Menu
-# ==========================================
+# ==========================================================
 
 while true; do
 
     clear
 
     echo ""
-    echo -e "${CYAN}=========================================${NC}"
+    echo -e "${CYAN}==========================================${NC}"
     echo -e "${CYAN}       AstroCloude Installer${NC}"
-    echo -e "${CYAN}=========================================${NC}"
+    echo -e "${CYAN}==========================================${NC}"
     echo ""
     echo "1) Install Free Dashboard"
     echo "2) Install AstroCloude"
@@ -422,7 +530,7 @@ while true; do
 
         *)
             echo ""
-            echo -e "${RED}Invalid option.${NC}"
+            echo -e "${RED}Invalid option. Please select 1-5.${NC}"
             sleep 2
             ;;
 
