@@ -2,6 +2,7 @@
 
 # =====================================
 # Astro Dashboard Installer
+# Free Dashboard + AstroCloude
 # =====================================
 
 RED='\033[0;31m'
@@ -12,40 +13,26 @@ CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
-while true; do
-    clear
+FREE_PATH="/root/Free-Dasebord"
+ASTRO_PATH="/root/AstroCloude"
 
-    echo -e "${CYAN}==============================================${NC}"
-    echo -e "${BLUE}        Astro Dashboard Installer${NC}"
-    echo -e "${CYAN}==============================================${NC}"
+FREE_REPO="https://github.com/Deepakdhakargamer/Free-Dasebord.git"
+ASTRO_REPO="https://github.com/Deepakdhakargamer/AstroCloude.git"
 
-    if [ -d "/root/Free-Dasebord" ]; then
-        echo -e "${GREEN}Dashboard Status : Installed${NC}"
-    else
-        echo -e "${RED}Dashboard Status : Not Installed${NC}"
-    fi
+PORT="3000"
 
-    echo ""
-    echo -e "${YELLOW}1) Install Dashboard${NC}"
-    echo -e "${YELLOW}2) Delete Dashboard${NC}"
-    echo -e "${YELLOW}3) Exit${NC}"
-    echo ""
-    read -p "Select an option [1-3]: " OPTION
+# =====================================
+# Functions
+# =====================================
 
-    case $OPTION in
+install_requirements() {
 
-    1)
-        clear
+    echo -e "${YELLOW}[1/4] Updating System...${NC}"
+    apt update -y
 
-        echo -e "${CYAN}==============================================${NC}"
-        echo -e "${BLUE}Installing Astro Dashboard...${NC}"
-        echo -e "${CYAN}==============================================${NC}"
+    echo -e "${YELLOW}[2/4] Installing Required Packages...${NC}"
 
-        echo -e "${YELLOW}[1/7] Updating System...${NC}"
-        apt update -y
-
-        echo -e "${YELLOW}[2/7] Installing Required Packages...${NC}"
-        apt install -y \
+    apt install -y \
         curl \
         git \
         ca-certificates \
@@ -60,107 +47,281 @@ while true; do
         lsof \
         psmisc
 
-        echo -e "${YELLOW}[3/7] Installing Node.js 20...${NC}"
+    echo -e "${YELLOW}[3/4] Checking Node.js...${NC}"
 
-        if ! command -v node >/dev/null 2>&1; then
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt install -y nodejs
-        fi
+    if ! command -v node >/dev/null 2>&1; then
 
-        echo ""
-        echo -e "${GREEN}Node Version : $(node -v)${NC}"
-        echo -e "${GREEN}NPM Version  : $(npm -v)${NC}"
-        echo ""
+        echo -e "${CYAN}Installing Node.js 20...${NC}"
 
-        echo -e "${YELLOW}[4/7] Downloading Dashboard...${NC}"
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt install -y nodejs
 
-        rm -rf /root/Free-Dasebord
+    fi
 
-        git clone https://github.com/Deepakdhakargamer/Free-Dasebord.git /root/Free-Dasebord
+    echo -e "${GREEN}Node Version : $(node -v)${NC}"
+    echo -e "${GREEN}NPM Version  : $(npm -v)${NC}"
 
-        cd /root/Free-Dasebord
+    echo -e "${YELLOW}[4/4] Requirements Ready!${NC}"
 
-        echo -e "${YELLOW}[5/7] Installing NPM Packages...${NC}"
+    echo ""
+}
 
-        rm -rf node_modules package-lock.json
-        npm install
 
-        echo -e "${YELLOW}[6/7] Resetting Database...${NC}"
+# =====================================
+# Stop Dashboard Processes
+# =====================================
 
-        rm -f database.db database.sqlite
-        find . -name "*.db" -delete
-        find . -name "*.sqlite" -delete
-        find . -name "*.sqlite3" -delete
+stop_port() {
 
-        echo -e "${YELLOW}[7/7] Freeing Ports...${NC}"
+    echo -e "${YELLOW}Freeing port ${PORT}...${NC}"
 
-        pkill -9 node >/dev/null 2>&1 || true
-        fuser -k 3000/tcp >/dev/null 2>&1 || true
-        fuser -k 5173/tcp >/dev/null 2>&1 || true
-        fuser -k 24678/tcp >/dev/null 2>&1 || true
-        fuser -k 80/tcp >/dev/null 2>&1 || true
-        fuser -k 443/tcp >/dev/null 2>&1 || true
+    fuser -k ${PORT}/tcp >/dev/null 2>&1 || true
 
-        clear
-        echo -e "${GREEN}==============================================${NC}"
-        echo -e "${GREEN}Dashboard Installed Successfully!${NC}"
-        echo -e "${GREEN}Starting Dashboard...${NC}"
-        echo -e "${GREEN}==============================================${NC}"
+    sleep 2
+}
 
-        npm run dev
-        ;;
 
-    2)
-        clear
+# =====================================
+# Install Free Dashboard
+# =====================================
 
-        echo -e "${RED}==============================================${NC}"
-        echo -e "${RED}Removing Astro Dashboard...${NC}"
-        echo -e "${RED}==============================================${NC}"
+install_free_dashboard() {
 
-        echo -e "${YELLOW}Stopping PM2...${NC}"
+    clear
 
-        if command -v pm2 >/dev/null 2>&1; then
-            pm2 delete astro-dashboard >/dev/null 2>&1 || true
-            pm2 delete all >/dev/null 2>&1 || true
-            pm2 save >/dev/null 2>&1 || true
-        fi
+    echo -e "${CYAN}==============================================${NC}"
+    echo -e "${BLUE}       Installing Free Dashboard${NC}"
+    echo -e "${CYAN}==============================================${NC}"
 
-        echo -e "${YELLOW}Stopping Node.js...${NC}"
-        pkill -9 node >/dev/null 2>&1 || true
+    install_requirements
 
-        echo -e "${YELLOW}Freeing Ports...${NC}"
-        fuser -k 3000/tcp >/dev/null 2>&1 || true
-        fuser -k 5173/tcp >/dev/null 2>&1 || true
-        fuser -k 24678/tcp >/dev/null 2>&1 || true
-        fuser -k 80/tcp >/dev/null 2>&1 || true
-        fuser -k 443/tcp >/dev/null 2>&1 || true
+    echo -e "${YELLOW}Stopping anything using port ${PORT}...${NC}"
+    stop_port
 
-        echo -e "${YELLOW}Deleting Dashboard Files...${NC}"
+    echo -e "${YELLOW}Downloading Free Dashboard...${NC}"
 
-        rm -rf /root/Free-Dasebord
+    rm -rf "$FREE_PATH"
 
-        clear
+    git clone "$FREE_REPO" "$FREE_PATH"
 
-        echo -e "${GREEN}==============================================${NC}"
-        echo -e "${GREEN}Dashboard Deleted Successfully!${NC}"
-        echo -e "${GREEN}✔ Node Processes Stopped${NC}"
-        echo -e "${GREEN}✔ Ports Released (3000,5173,24678,80,443)${NC}"
-        echo -e "${GREEN}✔ Dashboard Files Removed${NC}"
-        echo -e "${GREEN}==============================================${NC}"
-
+    if [ ! -d "$FREE_PATH" ]; then
+        echo -e "${RED}Failed to download Free Dashboard!${NC}"
         read -p "Press Enter to continue..."
-        ;;
+        return
+    fi
 
-    3)
-        clear
-        echo -e "${GREEN}Thank you for using Astro Dashboard Installer!${NC}"
-        exit 0
-        ;;
+    cd "$FREE_PATH" || exit
 
-    *)
-        echo -e "${RED}Invalid Option!${NC}"
-        sleep 2
-        ;;
+    echo -e "${YELLOW}Installing NPM Packages...${NC}"
+
+    rm -rf node_modules
+
+    npm install
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}NPM installation failed!${NC}"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    echo ""
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e "${GREEN}Free Dashboard Installed Successfully!${NC}"
+    echo -e "${GREEN}Starting Dashboard on port ${PORT}...${NC}"
+    echo -e "${GREEN}==============================================${NC}"
+    echo ""
+
+    npm run dev
+}
+
+
+# =====================================
+# Install AstroCloude
+# =====================================
+
+install_astrocloude() {
+
+    clear
+
+    echo -e "${CYAN}==============================================${NC}"
+    echo -e "${BLUE}          Installing AstroCloude${NC}"
+    echo -e "${CYAN}==============================================${NC}"
+
+    install_requirements
+
+    echo -e "${YELLOW}Stopping anything using port ${PORT}...${NC}"
+    stop_port
+
+    echo -e "${YELLOW}Downloading AstroCloude...${NC}"
+
+    rm -rf "$ASTRO_PATH"
+
+    git clone "$ASTRO_REPO" "$ASTRO_PATH"
+
+    if [ ! -d "$ASTRO_PATH" ]; then
+        echo -e "${RED}Failed to download AstroCloude!${NC}"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    cd "$ASTRO_PATH" || exit
+
+    echo -e "${YELLOW}Installing NPM Packages...${NC}"
+
+    rm -rf node_modules
+
+    npm install
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}NPM installation failed!${NC}"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    echo ""
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e "${GREEN}AstroCloude Installed Successfully!${NC}"
+    echo -e "${GREEN}Starting AstroCloude on port ${PORT}...${NC}"
+    echo -e "${GREEN}==============================================${NC}"
+    echo ""
+
+    npm run dev
+}
+
+
+# =====================================
+# Delete Free Dashboard
+# =====================================
+
+delete_free_dashboard() {
+
+    clear
+
+    echo -e "${RED}==============================================${NC}"
+    echo -e "${RED}       Removing Free Dashboard${NC}"
+    echo -e "${RED}==============================================${NC}"
+
+    echo -e "${YELLOW}Stopping Dashboard...${NC}"
+
+    fuser -k ${PORT}/tcp >/dev/null 2>&1 || true
+
+    if command -v pm2 >/dev/null 2>&1; then
+        pm2 delete astro-dashboard >/dev/null 2>&1 || true
+    fi
+
+    echo -e "${YELLOW}Deleting Dashboard Files...${NC}"
+
+    rm -rf "$FREE_PATH"
+
+    echo ""
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e "${GREEN}Free Dashboard Deleted Successfully!${NC}"
+    echo -e "${GREEN}==============================================${NC}"
+
+    read -p "Press Enter to continue..."
+}
+
+
+# =====================================
+# Delete AstroCloude
+# =====================================
+
+delete_astrocloude() {
+
+    clear
+
+    echo -e "${RED}==============================================${NC}"
+    echo -e "${RED}          Removing AstroCloude${NC}"
+    echo -e "${RED}==============================================${NC}"
+
+    echo -e "${YELLOW}Stopping AstroCloude...${NC}"
+
+    fuser -k ${PORT}/tcp >/dev/null 2>&1 || true
+
+    if command -v pm2 >/dev/null 2>&1; then
+        pm2 delete astrocloude >/dev/null 2>&1 || true
+    fi
+
+    echo -e "${YELLOW}Deleting AstroCloude Files...${NC}"
+
+    rm -rf "$ASTRO_PATH"
+
+    echo ""
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e "${GREEN}AstroCloude Deleted Successfully!${NC}"
+    echo -e "${GREEN}==============================================${NC}"
+
+    read -p "Press Enter to continue..."
+}
+
+
+# =====================================
+# Main Menu
+# =====================================
+
+while true; do
+
+    clear
+
+    echo -e "${CYAN}==============================================${NC}"
+    echo -e "${BLUE}          Astro Dashboard Installer${NC}"
+    echo -e "${CYAN}==============================================${NC}"
+
+    echo ""
+
+    # Free Dashboard Status
+    if [ -d "$FREE_PATH" ]; then
+        echo -e "${GREEN}Free Dashboard : Installed${NC}"
+    else
+        echo -e "${RED}Free Dashboard : Not Installed${NC}"
+    fi
+
+    # AstroCloude Status
+    if [ -d "$ASTRO_PATH" ]; then
+        echo -e "${GREEN}AstroCloude    : Installed${NC}"
+    else
+        echo -e "${RED}AstroCloude    : Not Installed${NC}"
+    fi
+
+    echo ""
+    echo -e "${YELLOW}1) Install Free Dashboard${NC}"
+    echo -e "${YELLOW}2) Install AstroCloude${NC}"
+    echo -e "${YELLOW}3) Delete Free Dashboard${NC}"
+    echo -e "${YELLOW}4) Delete AstroCloude${NC}"
+    echo -e "${YELLOW}5) Exit${NC}"
+    echo ""
+
+    read -p "Select an option [1-5]: " OPTION
+
+    case $OPTION in
+
+        1)
+            install_free_dashboard
+            ;;
+
+        2)
+            install_astrocloude
+            ;;
+
+        3)
+            delete_free_dashboard
+            ;;
+
+        4)
+            delete_astrocloude
+            ;;
+
+        5)
+            clear
+            echo -e "${GREEN}Thank you for using Astro Dashboard Installer!${NC}"
+            exit 0
+            ;;
+
+        *)
+            echo -e "${RED}Invalid Option!${NC}"
+            sleep 2
+            ;;
+
     esac
 
 done
