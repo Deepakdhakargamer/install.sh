@@ -102,31 +102,21 @@ install_free_dashboard() {
     git clone "$FREE_REPO" "$FREE_PATH"
 
     if [ ! -d "$FREE_PATH" ]; then
-
         echo -e "${RED}Failed to download Free Dashboard!${NC}"
-
         read -p "Press Enter to continue..."
         return
-
     fi
 
     cd "$FREE_PATH" || return
 
     echo -e "${YELLOW}Installing NPM Packages...${NC}"
 
-    rm -rf node_modules package-lock.json
-
-    npm cache clean --force
-
-    npm install --include=optional
+    npm install
 
     if [ $? -ne 0 ]; then
-
         echo -e "${RED}NPM installation failed!${NC}"
-
         read -p "Press Enter to continue..."
         return
-
     fi
 
     echo ""
@@ -162,12 +152,9 @@ install_astrocloude() {
     git clone "$ASTRO_REPO" "$ASTRO_PATH"
 
     if [ ! -d "$ASTRO_PATH" ]; then
-
         echo -e "${RED}Failed to download AstroCloude!${NC}"
-
         read -p "Press Enter to continue..."
         return
-
     fi
 
     cd "$ASTRO_PATH" || return
@@ -179,12 +166,18 @@ install_astrocloude() {
     echo ""
 
     # =====================================
-    # Exact Fix For Tailwind Native Binding
+    # Exact AstroCloude Fix
     # =====================================
 
     echo -e "${YELLOW}[1/5] Removing node_modules and package-lock.json...${NC}"
 
     rm -rf node_modules package-lock.json
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to remove old dependencies!${NC}"
+        read -p "Press Enter to continue..."
+        return
+    fi
 
     echo -e "${GREEN}Done.${NC}"
 
@@ -193,41 +186,39 @@ install_astrocloude() {
 
     npm cache clean --force
 
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}NPM cache cleanup failed!${NC}"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
     echo -e "${GREEN}Done.${NC}"
 
     echo ""
-    echo -e "${YELLOW}[3/5] Installing NPM packages...${NC}"
+    echo -e "${YELLOW}[3/5] Installing NPM packages with optional dependencies...${NC}"
 
     npm install --include=optional
 
     if [ $? -ne 0 ]; then
-
-        echo ""
         echo -e "${RED}NPM installation failed!${NC}"
-
         read -p "Press Enter to continue..."
         return
-
     fi
 
     echo -e "${GREEN}NPM packages installed successfully.${NC}"
 
     echo ""
-    echo -e "${YELLOW}[4/5] Installing Tailwind native binding...${NC}"
+    echo -e "${YELLOW}[4/5] Installing Tailwind CSS Oxide...${NC}"
 
-    npm install @tailwindcss/oxide-linux-x64-gnu --save-dev --force
+    npm install @tailwindcss/oxide --force
 
     if [ $? -ne 0 ]; then
-
-        echo ""
-        echo -e "${RED}Tailwind native binding installation failed!${NC}"
-
+        echo -e "${RED}Tailwind CSS Oxide installation failed!${NC}"
         read -p "Press Enter to continue..."
         return
-
     fi
 
-    echo -e "${GREEN}Tailwind native binding installed successfully.${NC}"
+    echo -e "${GREEN}Tailwind CSS Oxide installed successfully.${NC}"
 
     echo ""
     echo -e "${YELLOW}[5/5] Starting AstroCloude...${NC}"
@@ -238,10 +229,6 @@ install_astrocloude() {
     echo -e "${GREEN}Starting AstroCloude on port ${PORT}...${NC}"
     echo -e "${GREEN}==============================================${NC}"
     echo ""
-
-    # =====================================
-    # Start AstroCloude
-    # =====================================
 
     npm run dev
 }
@@ -324,28 +311,16 @@ while true; do
 
     echo ""
 
-    # Free Dashboard Status
-
     if [ -d "$FREE_PATH" ]; then
-
         echo -e "${GREEN}Free Dashboard : Installed${NC}"
-
     else
-
         echo -e "${RED}Free Dashboard : Not Installed${NC}"
-
     fi
 
-    # AstroCloude Status
-
     if [ -d "$ASTRO_PATH" ]; then
-
         echo -e "${GREEN}AstroCloude    : Installed${NC}"
-
     else
-
         echo -e "${RED}AstroCloude    : Not Installed${NC}"
-
     fi
 
     echo ""
@@ -380,15 +355,12 @@ while true; do
 
         5)
             clear
-
             echo -e "${GREEN}Thank you for using Astro Dashboard Installer!${NC}"
-
             exit 0
             ;;
 
         *)
             echo -e "${RED}Invalid Option!${NC}"
-
             sleep 2
             ;;
 
