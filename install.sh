@@ -22,7 +22,7 @@ ASTRO_REPO="https://github.com/Deepakdhakargamer/AstroCloude.git"
 PORT="3000"
 
 # =====================================
-# Functions
+# Install Requirements
 # =====================================
 
 install_requirements() {
@@ -66,9 +66,8 @@ install_requirements() {
     echo ""
 }
 
-
 # =====================================
-# Stop Dashboard Processes
+# Stop Port
 # =====================================
 
 stop_port() {
@@ -80,6 +79,89 @@ stop_port() {
     sleep 2
 }
 
+# =====================================
+# Install NPM Dependencies
+# =====================================
+
+install_npm_dependencies() {
+
+    echo -e "${YELLOW}Removing old node_modules...${NC}"
+
+    rm -rf node_modules
+
+    echo -e "${YELLOW}Removing old package-lock.json...${NC}"
+
+    rm -f package-lock.json
+
+    echo -e "${YELLOW}Cleaning NPM cache...${NC}"
+
+    npm cache clean --force
+
+    echo -e "${YELLOW}Installing NPM dependencies...${NC}"
+
+    npm install --include=optional --legacy-peer-deps
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}NPM installation failed!${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}NPM dependencies installed successfully!${NC}"
+
+    return 0
+}
+
+# =====================================
+# Fix Tailwind Native Binding
+# =====================================
+
+fix_tailwind() {
+
+    echo -e "${YELLOW}Checking Tailwind CSS native binding...${NC}"
+
+    if [ -d "node_modules/@tailwindcss/oxide" ]; then
+
+        echo -e "${GREEN}Tailwind Oxide found.${NC}"
+
+        npm rebuild @tailwindcss/oxide >/dev/null 2>&1 || true
+
+    else
+
+        echo -e "${YELLOW}Tailwind Oxide not found. Installing...${NC}"
+
+        npm install @tailwindcss/oxide --save-dev \
+            --include=optional \
+            --legacy-peer-deps \
+            --force
+
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to install Tailwind Oxide!${NC}"
+            return 1
+        fi
+
+        npm rebuild @tailwindcss/oxide >/dev/null 2>&1 || true
+    fi
+
+    echo -e "${GREEN}Tailwind native binding fixed.${NC}"
+
+    return 0
+}
+
+# =====================================
+# Start Dashboard
+# =====================================
+
+start_dashboard() {
+
+    echo ""
+    echo -e "${GREEN}==============================================${NC}"
+    echo -e "${GREEN}Dashboard Installed Successfully!${NC}"
+    echo -e "${GREEN}Starting on port ${PORT}...${NC}"
+    echo -e "${GREEN}==============================================${NC}"
+    echo ""
+
+    npm run dev -- --host 0.0.0.0 --port ${PORT}
+}
 
 # =====================================
 # Install Free Dashboard
@@ -95,7 +177,6 @@ install_free_dashboard() {
 
     install_requirements
 
-    echo -e "${YELLOW}Stopping anything using port ${PORT}...${NC}"
     stop_port
 
     echo -e "${YELLOW}Downloading Free Dashboard...${NC}"
@@ -110,30 +191,15 @@ install_free_dashboard() {
         return
     fi
 
-    cd "$FREE_PATH" || exit
+    cd "$FREE_PATH" || return
 
-    echo -e "${YELLOW}Installing NPM Packages...${NC}"
-
-    rm -rf node_modules
-
-    npm install
-
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}NPM installation failed!${NC}"
+    if ! install_npm_dependencies; then
         read -p "Press Enter to continue..."
         return
     fi
 
-    echo ""
-    echo -e "${GREEN}==============================================${NC}"
-    echo -e "${GREEN}Free Dashboard Installed Successfully!${NC}"
-    echo -e "${GREEN}Starting Dashboard on port ${PORT}...${NC}"
-    echo -e "${GREEN}==============================================${NC}"
-    echo ""
-
-    npm run dev
+    start_dashboard
 }
-
 
 # =====================================
 # Install AstroCloude
@@ -149,7 +215,6 @@ install_astrocloude() {
 
     install_requirements
 
-    echo -e "${YELLOW}Stopping anything using port ${PORT}...${NC}"
     stop_port
 
     echo -e "${YELLOW}Downloading AstroCloude...${NC}"
@@ -164,21 +229,18 @@ install_astrocloude() {
         return
     fi
 
-    cd "$ASTRO_PATH" || exit
+    cd "$ASTRO_PATH" || return
 
-    echo -e "${YELLOW}Installing NPM Packages...${NC}"
+    echo -e "${YELLOW}Installing AstroCloude dependencies...${NC}"
 
-   
-    rm -rf node_modules package-lock.json
+    if ! install_npm_dependencies; then
+        read -p "Press Enter to continue..."
+        return
+    fi
 
-    npm cache clean --force
+    echo -e "${YELLOW}Fixing Tailwind CSS native binding...${NC}"
 
-    npm install --include=optional
-
-    npm install @tailwindcss/oxide-linux-x64-gnu --save-dev --force rm -rf node_modules
-
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}NPM installation failed!${NC}"
+    if ! fix_tailwind; then
         read -p "Press Enter to continue..."
         return
     fi
@@ -190,9 +252,8 @@ install_astrocloude() {
     echo -e "${GREEN}==============================================${NC}"
     echo ""
 
-    npm run dev
+    npm run dev -- --host 0.0.0.0 --port ${PORT}
 }
-
 
 # =====================================
 # Delete Free Dashboard
@@ -206,26 +267,20 @@ delete_free_dashboard() {
     echo -e "${RED}       Removing Free Dashboard${NC}"
     echo -e "${RED}==============================================${NC}"
 
-    echo -e "${YELLOW}Stopping Dashboard...${NC}"
-
     fuser -k ${PORT}/tcp >/dev/null 2>&1 || true
 
     if command -v pm2 >/dev/null 2>&1; then
         pm2 delete astro-dashboard >/dev/null 2>&1 || true
     fi
 
-    echo -e "${YELLOW}Deleting Dashboard Files...${NC}"
-
     rm -rf "$FREE_PATH"
 
     echo ""
-    echo -e "${GREEN}==============================================${NC}"
     echo -e "${GREEN}Free Dashboard Deleted Successfully!${NC}"
-    echo -e "${GREEN}==============================================${NC}"
+    echo ""
 
     read -p "Press Enter to continue..."
 }
-
 
 # =====================================
 # Delete AstroCloude
@@ -239,26 +294,20 @@ delete_astrocloude() {
     echo -e "${RED}          Removing AstroCloude${NC}"
     echo -e "${RED}==============================================${NC}"
 
-    echo -e "${YELLOW}Stopping AstroCloude...${NC}"
-
     fuser -k ${PORT}/tcp >/dev/null 2>&1 || true
 
     if command -v pm2 >/dev/null 2>&1; then
         pm2 delete astrocloude >/dev/null 2>&1 || true
     fi
 
-    echo -e "${YELLOW}Deleting AstroCloude Files...${NC}"
-
     rm -rf "$ASTRO_PATH"
 
     echo ""
-    echo -e "${GREEN}==============================================${NC}"
     echo -e "${GREEN}AstroCloude Deleted Successfully!${NC}"
-    echo -e "${GREEN}==============================================${NC}"
+    echo ""
 
     read -p "Press Enter to continue..."
 }
-
 
 # =====================================
 # Main Menu
@@ -274,14 +323,12 @@ while true; do
 
     echo ""
 
-    # Free Dashboard Status
     if [ -d "$FREE_PATH" ]; then
         echo -e "${GREEN}Free Dashboard : Installed${NC}"
     else
         echo -e "${RED}Free Dashboard : Not Installed${NC}"
     fi
 
-    # AstroCloude Status
     if [ -d "$ASTRO_PATH" ]; then
         echo -e "${GREEN}AstroCloude    : Installed${NC}"
     else
@@ -289,11 +336,13 @@ while true; do
     fi
 
     echo ""
+
     echo -e "${YELLOW}1) Install Free Dashboard${NC}"
     echo -e "${YELLOW}2) Install AstroCloude${NC}"
     echo -e "${YELLOW}3) Delete Free Dashboard${NC}"
     echo -e "${YELLOW}4) Delete AstroCloude${NC}"
     echo -e "${YELLOW}5) Exit${NC}"
+
     echo ""
 
     read -p "Select an option [1-5]: " OPTION
