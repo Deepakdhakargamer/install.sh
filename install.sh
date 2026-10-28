@@ -13,7 +13,7 @@ set -u
 ASTRO_PATH="/root/AstroCloude"
 FREE_PATH="/root/Free-Dasebord"
 
-ASTRO_REPO="https://github.com/Deepakdhakargamer/AstroCloude.git"
+ASTRO_REPO="https://github.com/Deepakdhakargamer/paid.git"
 FREE_REPO="https://github.com/Deepakdhakargamer/Free-Dasebord.git"
 
 PORT=3000
